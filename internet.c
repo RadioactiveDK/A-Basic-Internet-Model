@@ -2,23 +2,45 @@
 #include <stdlib.h>
 
 struct node{
-    int status; //working or crashed
+    int status; // working(1) or crashed(0)
     int packet;
     int IP;
     struct node* adjacent;
-} *home;
+} home;
 
-void data2packets(FILE * f){
-  
+
+void data2packets( char ){
+    ;
 }
 
 int main(){
-    printf("You are now connected to your home wifi!!\v\n");
-    struct node* myPC = home;
+beginning:
+    printf("\n\tYou are now connected to a wifi.\n");
+    struct node *myPC = &home;
+    myPC->status = 1;
+    char c;    // choice
 
-    while(home->status != 0 ){
-
+    while(myPC->status == 1 ){
+        printf("\na) Read a poem\nb) Solve maths problms\nc) Crash the router!!\nWhat would you like to do?: ");
+        scanf("%c",&c);
+        getchar();
+        if(c != 'c') {
+            data2packets(c);
+        }
+        else {
+            myPC->status = 0;
+        }
     }
-    printf("ERROR: No signal!\n");
+    printf("\n\tERROR: No signal!\n\tWould you like to connect to your another wifi?(y/n): ");
+    scanf("%c",&c);
+    getchar();
+    if ( c == 'y'){
+        myPC = myPC->adjacent;
+        myPC->status = 1;
+        goto beginning;
+    }
+    else {
+        printf("\n\tPower off\n");
+    }
     return 0;
 }
