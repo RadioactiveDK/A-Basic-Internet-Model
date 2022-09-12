@@ -3,7 +3,7 @@
 
 struct node{
     int status; //working or crashed
-    short int packet;
+    int packet;
     int IP;
     struct node* adjacent;
 } *home;
