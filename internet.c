@@ -18,6 +18,8 @@ struct connection{  // database or user
     struct router* connected_router;
 }myPC,poem,math;
 
+
+
 void internet(){
     ;
 }
@@ -53,7 +55,7 @@ beginning:
 
     // some internet surfing
     while(myPC.connected_router -> status == 1 ){
-        printf("\na) Read a poem\nb) Solve maths problms\nc) Crash the router!!\nWhat would yo like to do?: ");
+        printf("\na) 'The Road Not Taken' by Robert Frost\nb) Pythagoras theorem\nc) Crash the router!!\nWhat would you like to do?: ");
         scanf("%c",&choice);
         getchar();
         if(choice != 'c') interact(choice);
