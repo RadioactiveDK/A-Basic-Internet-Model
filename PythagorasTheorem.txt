@@ -1,0 +1,1 @@
+The Pythagoras theorem which is also referred to as the Pythagorean theorem explains the relationship between the three sides of a right-angled triangle. According to the Pythagoras theorem, the square of the hypotenuse is equal to the sum of the squares of the other two sides of a triangle.
