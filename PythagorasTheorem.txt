@@ -1,1 +1,4 @@
-The Pythagoras theorem which is also referred to as the Pythagorean theorem explains the relationship between the three sides of a right-angled triangle. According to the Pythagoras theorem, the square of the hypotenuse is equal to the sum of the squares of the other two sides of a triangle.
+The Pythagoras theorem explains the relationship between the three sides of a right-angled triangle.
+According to the Pythagoras theorem, the square of the hypotenuse(C) is equal to the sum of the squares of the other two sides(A and B) of a triangle.
+
+A^2 + B^2 = C^2
