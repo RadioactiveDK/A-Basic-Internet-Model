@@ -5,7 +5,7 @@
 // for simplicity, IP addresses are of 1 byte
 
 struct router{
-    char IP;
+    unsigned char IP;
     int status;     // working(1) or not working(0)
     struct router* *adjacent;
     int *weight;
@@ -17,19 +17,21 @@ struct router{
 };
 
 struct database{  // database or user
-    char IP;
+    unsigned char IP;
     FILE* data_unit;    // data storing unit
     struct router *connected_router;
 } *myPC , *poem , *math;
 
 // creates a router node
-struct router* create_router(char IP){
+struct router* create_router(unsigned char IP){
     struct router *x = (struct router *)malloc(sizeof(struct router));
     x->status = 1;
     x->IP = IP;
     x->adjacent = (struct router**)malloc(2*sizeof(struct router*));
     x->upper_layer = NULL;
+    x->lower_layer = NULL;
     x->weight = (int*)malloc(2*sizeof(int));
+    x->user=NULL;
 
     if(IP%(1<<4) == 0 )x->level = 0;
     else x->level = 1;
@@ -38,7 +40,7 @@ struct router* create_router(char IP){
 }
 
 // Domain Name Server
-char DNS(char c){
+unsigned char DNS(char c){
     if(c=='a') return poem->IP;
     else if(c=='b') return math->IP;
     else return '\0';
@@ -81,7 +83,7 @@ void dijkstra(int graph[15][15], int src, struct router* r){
 }
 
 // Establishes graph with my PC, poem and math at appropriate positions
-void internet(char PC_IP, char p_IP , char m_IP){
+void internet(unsigned char PC_IP, unsigned char p_IP , unsigned char m_IP){
     struct router *temp,*prev,*head, *head1;
     int g[15][15];
     for(int i=0;i<15;i++) for(int j=0;j<15;j++) g[i][j] = 0;
@@ -183,31 +185,31 @@ void internet(char PC_IP, char p_IP , char m_IP){
         head1=temp;
         head = head->adjacent[1];
     }
+    
 }
 
 // Routing algorithm using the routing tables
 struct database* route(struct database* s, unsigned int p){
     struct router* here = s->connected_router;
 
-    int r_IP = (p>>24);
+    unsigned char r_IP = (unsigned char)(p>>24);
     int r_level;
     if(r_IP % (1<<4) == 0) r_level=0;
     else r_level = 1;
 
-    if( here->level==1 && r_level==1 && ((here->IP)>>4) != ((r_IP)>>4) ) here = here->upper_layer;
-
+    if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) here = here->upper_layer;
+    
     if (here->level == 0) {
-        while( (r_IP>>4) != (here->IP>>4) ) {
+        while( (r_IP>>4) != (here->IP>>4) ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP>>4)-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP>>4)-1])
                 here=here->adjacent[0];
             else here=here->adjacent[1];
         }
+        if(here->IP != r_IP ) here=here->lower_layer;
     }
 
-    if(here->IP != r_IP && here->level == 0) here=here->lower_layer;
-
     if (here->level == 1) {
-        while( r_IP != here->IP ) {
+        while( r_IP != here->IP ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP%(1<<4))-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP%(1<<4))-1])
                 here=here->adjacent[0];
             else here=here->adjacent[1];
@@ -218,7 +220,7 @@ struct database* route(struct database* s, unsigned int p){
 }
 
 // Converting data to packets and delivering them
-void send_request( struct database* sender , char r_IP){
+void send_request( struct database* sender , unsigned char r_IP){
     struct database *temp, *temp1;
     
     unsigned int p = r_IP*(1<<24) + sender->IP*(1<<16);
@@ -235,6 +237,9 @@ void send_request( struct database* sender , char r_IP){
             printf("%c",p % (1<<8));
             c = fgetc(f);
         }
+    fclose(f);
+    if(temp==poem) poem->data_unit = fopen("TheRoadNotTaken.txt","r");
+    else math->data_unit = fopen("PythagorasTheorem.txt","r");
     printf("\n");
 }
 
