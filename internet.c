@@ -23,7 +23,7 @@ struct database{  // database or user
 } *myPC , *poem , *math;
 
 // creates a router node
-struct router* create_router(unsigned char IP){
+struct router* create_router(struct router* PtrArr[], unsigned char IP){
     struct router *x = (struct router *)malloc(sizeof(struct router));
     x->status = 1;
     x->IP = IP;
@@ -36,6 +36,7 @@ struct router* create_router(unsigned char IP){
     if(IP%(1<<4) == 0 )x->level = 0;
     else x->level = 1;
     x->routing_table = (int*)malloc(15*sizeof(int));
+    PtrArr[IP] = x;
     return x;
 }
 
@@ -68,7 +69,10 @@ int minDistance(int dist[], bool SPT[]){
 // Making Routing Tables
 void dijkstra(int graph[15][15], int src, struct router* r){
     bool SPT[15];
-    for(int i=0;i<15;i++) r->routing_table[i] = INT_MAX, SPT[i] = false;
+    for(int i=0;i<15;i++) {
+        r->routing_table[i] = INT_MAX;
+        SPT[i] = false;
+    }
     r->routing_table[src] = 0;
     for (int i = 0; i < 14; i++) {
         int u = minDistance(r->routing_table, SPT);
@@ -83,13 +87,13 @@ void dijkstra(int graph[15][15], int src, struct router* r){
 }
 
 // Establishes graph with my PC, poem and math at appropriate positions
-void internet(unsigned char PC_IP, unsigned char p_IP , unsigned char m_IP){
+void internet(struct router* PtrArr[], unsigned char PC_IP, unsigned char p_IP , unsigned char m_IP){
     struct router *temp,*prev,*head, *head1;
     int g[15][15];
     for(int i=0;i<15;i++) for(int j=0;j<15;j++) g[i][j] = 0;
 
     for(int i=1 ; i<16;i++){
-        temp = create_router(i<<4);
+        temp = create_router(PtrArr,i<<4);
         if(i == 15){
             connect_routers(temp, head);
             connect_routers(prev,temp);
@@ -137,7 +141,7 @@ void internet(unsigned char PC_IP, unsigned char p_IP , unsigned char m_IP){
         for(int i=0;i<15;i++) for(int j=0;j<15;j++) g[i][j] = 0;
 
         for(int i=1 ; i<16 ; i++){
-            temp = create_router((j<<4) + i);
+            temp = create_router(PtrArr, (j<<4) + i);
             temp->upper_layer = head;
             
             if(i == 15){
@@ -200,6 +204,7 @@ struct database* route(struct database* s, unsigned int p){
     if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) here = here->upper_layer;
     
     if (here->level == 0) {
+        if (here->routing_table[(r_IP>>4)-1] == INT_MAX) return here->user;
         while( (r_IP>>4) != (here->IP>>4) ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP>>4)-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP>>4)-1])
                 here=here->adjacent[0];
@@ -209,6 +214,7 @@ struct database* route(struct database* s, unsigned int p){
     }
 
     if (here->level == 1) {
+        if (here->routing_table[(r_IP%(1<<4))-1] == INT_MAX) return here->user;
         while( r_IP != here->IP ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP%(1<<4))-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP%(1<<4))-1])
                 here=here->adjacent[0];
@@ -225,31 +231,41 @@ void send_request( struct database* sender , unsigned char r_IP){
     
     unsigned int p = r_IP*(1<<24) + sender->IP*(1<<16);
     temp = route(sender, p );
-    p = sender->IP*(1<<24) + r_IP*(1<<16);
+    if(temp->IP == r_IP) p = sender->IP*(1<<24) + r_IP*(1<<16);
+    else p = sender->IP*(1<<24) + r_IP*(1<<16)+(1<<8);
+
     temp1 = route(temp,p);
 
     FILE* f = temp->data_unit;
     char c = fgetc(f);
     printf("\n");
-    if(temp1==sender)
+    if(temp1==sender && (p>>8)%2 == 0) {
         while(c!=EOF){
             p = sender->IP*(1<<24) + r_IP*(1<<16) + c;
             printf("%c",p % (1<<8));
             c = fgetc(f);
         }
-    fclose(f);
-    if(temp==poem) poem->data_unit = fopen("TheRoadNotTaken.txt","r");
-    else math->data_unit = fopen("PythagorasTheorem.txt","r");
+        fclose(f);
+        if(temp==poem) poem->data_unit = fopen("TheRoadNotTaken.txt","r");
+        else math->data_unit = fopen("PythagorasTheorem.txt","r");
+    }
+    else printf("\tServer Not Found");
     printf("\n");
 }
 
 // Handling crashing of a router
-void handle_crash(struct router* Crashed_Router);////////////////////????????????????????????????????????
+void echo(struct router* CR){
+    ;
+}
+
+
+void routing_protocol(struct router* IP){
+    ;
+}////////////////////????????????????????????????????????
 
 int main(){
 
 // declaring some variables/attributes
-    {
     myPC = (struct database*)malloc(sizeof(struct database));
     poem = (struct database*)malloc(sizeof(struct database));
     math = (struct database*)malloc(sizeof(struct database));
@@ -260,19 +276,19 @@ int main(){
     printf("Enter poem-router's unique IP (17-255): ");
     scanf("%d",&t);
     getchar();
-    poem->IP = (char)t;
+    poem->IP = (unsigned char)t;
     printf("Enter math-router's unique IP (17-255): ");
     scanf("%d",&t);
     getchar();
-    math->IP = (char)t;
+    math->IP = (unsigned char)t;
     printf("Enter myPC-router's unique IP (17-255): ");
     scanf("%d",&t);
     getchar();
-    myPC->IP = (char)t;
-    }
+    myPC->IP = (unsigned char)t;
 
 // setting up the internet graph
-    internet(myPC->IP , poem->IP , math->IP);
+    struct router* PtrArr[256];
+    internet(PtrArr, myPC->IP , poem->IP , math->IP);
 
 connect:
 // connected to a router
@@ -287,21 +303,16 @@ connect:
         if(choice=='d') goto end;
         else if(choice=='a'||choice=='b') send_request(myPC, DNS(choice));
         else if(choice == 'c' ){
-        //    handle_crash();////////////////////???????????????????
+            printf("Enter IP of the router to crash: ");
+            scanf("%d",&t);
+            getchar();
+            PtrArr[(unsigned char)t]->status = 0;
+            echo(PtrArr[(unsigned char)t]);
         }
         else printf("Please enter valid choice.\n");
     }
 
-// No signal
-    printf("\n\tERROR: No signal!\n\tWould you like to connect to your neighbour router?(y/n): ");
-    scanf("%c",&choice);
-    getchar();
-    if ( choice == 'y'){
-        myPC->connected_router=myPC->connected_router->adjacent[1];
-        myPC->connected_router->user=myPC;
-        goto connect;
-    }
-    
+// disconnected    
 end:printf("\n\tDisconnected!!\n");
     return 0;
 }
