@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+
 // for simplicity, IP addresses are of 1 byte
 
 struct router{
@@ -25,18 +26,21 @@ struct database{  // database or user
 // creates a router node
 struct router* create_router(struct router* PtrArr[], unsigned char IP){
     struct router *x = (struct router *)malloc(sizeof(struct router));
+    struct database *y = (struct database *)malloc(sizeof(struct database));
     x->status = 1;
     x->IP = IP;
     x->adjacent = (struct router**)malloc(2*sizeof(struct router*));
     x->upper_layer = NULL;
     x->lower_layer = NULL;
     x->weight = (int*)malloc(2*sizeof(int));
-    x->user=NULL;
+    x->user=y;
+    y->IP=IP;
+    y->connected_router=x;
 
     if(IP%(1<<4) == 0 )x->level = 0;
     else x->level = 1;
     x->routing_table = (int*)malloc(15*sizeof(int));
-    PtrArr[IP] = x;
+    PtrArr[(unsigned int)IP] = x;
     return x;
 }
 
@@ -89,7 +93,7 @@ void dijkstra(int graph[15][15], int src, struct router* r){
 // Establishes graph with my PC, poem and math at appropriate positions
 void internet(struct router* PtrArr[], unsigned char PC_IP, unsigned char p_IP , unsigned char m_IP){
     struct router *temp,*prev,*head, *head1;
-    int g[15][15];
+    int g[15][15];  //adjacency weighted matrix
     for(int i=0;i<15;i++) for(int j=0;j<15;j++) g[i][j] = 0;
 
     for(int i=1 ; i<16;i++){
@@ -230,16 +234,18 @@ void send_request( struct database* sender , unsigned char r_IP){
     struct database *temp, *temp1;
     
     unsigned int p = r_IP*(1<<24) + sender->IP*(1<<16);
-    temp = route(sender, p );
+    temp = route(sender, p);
+
+
     if(temp->IP == r_IP) p = sender->IP*(1<<24) + r_IP*(1<<16);
-    else p = sender->IP*(1<<24) + r_IP*(1<<16)+(1<<8);
+    else p = sender->IP*(1<<24) + r_IP*(1<<16) + (1<<8);
 
     temp1 = route(temp,p);
 
-    FILE* f = temp->data_unit;
-    char c = fgetc(f);
     printf("\n");
-    if(temp1==sender && (p>>8)%2 == 0) {
+    if( temp1==sender && (p>>8)%2 == 0) {
+        FILE* f = temp->data_unit;
+        char c = fgetc(f);
         while(c!=EOF){
             p = sender->IP*(1<<24) + r_IP*(1<<16) + c;
             printf("%c",p % (1<<8));
@@ -254,14 +260,52 @@ void send_request( struct database* sender , unsigned char r_IP){
 }
 
 // Handling crashing of a router
-void echo(struct router* CR){
-    ;
+void echo(struct router* PtrArr[], struct router* CR){
+    // echo
+    for(int i=0;i<15;i++) if(CR->routing_table[i]!=INT_MAX){
+        unsigned int p = ((CR->adjacent[0]->IP)<<24) + (CR->IP<<16) + (1<<10);
+        route(CR->user, p);
+    }
+
+    // updation of routing tables
+    int g[15][15];
+    if(CR->IP % 16 == 0){
+        for(int i=0; i<15; i++) for(int j=i; j<15; j++){
+            g[i][j] = 0;
+            g[j][i] = 0;
+            if( (PtrArr[(i+1)<<4]->status == 0) || (PtrArr[(j+1)<<4]->status == 0) ) ;
+            else if(PtrArr[(i+1)<<4]->adjacent[0]->IP == PtrArr[(j+1)<<4]->IP) {
+                g[i][j]=PtrArr[(i+1)<<4]->weight[0];
+                g[j][i]=PtrArr[(i+1)<<4]->weight[0];
+            }
+            else if(PtrArr[(i+1)<<4]->adjacent[1]->IP == PtrArr[(j+1)<<4]->IP){
+                g[i][j]=PtrArr[(i+1)<<4]->weight[1];
+                g[j][i]=PtrArr[(i+1)<<4]->weight[1];
+            }
+        }
+
+        for(int i=0;i<15;i++) dijkstra(g,i,PtrArr[(i+1)<<4]);
+
+    }
+    else{
+        unsigned int parent= CR->IP - (CR->IP%16);
+        for(int i=0; i<15; i++) for(int j=i; j<15; j++){
+            g[i][j] = 0;
+            g[j][i] = 0;
+            if( (PtrArr[(parent+i+1)]->status == 0) || (PtrArr[(parent+j+1)]->status == 0) ) ;
+            else if(PtrArr[(parent+i+1)]->adjacent[0]->IP == PtrArr[(parent+j+1)]->IP) {
+                g[i][j]=PtrArr[(parent+i+1)]->weight[0];
+                g[j][i]=PtrArr[(parent+i+1)]->weight[0];
+            }
+            else if(PtrArr[(parent+i+1)]->adjacent[1]->IP == PtrArr[(parent+j+1)]->IP){
+                g[i][j]=PtrArr[(parent+i+1)]->weight[1];
+                g[j][i]=PtrArr[(parent+i+1)]->weight[1];
+            }
+        }
+        for(int i=0;i<15;i++) dijkstra(g,i,PtrArr[(parent+i+1)]);
+    }
 }
 
-
-void routing_protocol(struct router* IP){
-    ;
-}////////////////////????????????????????????????????????
 
 int main(){
 
@@ -273,15 +317,15 @@ int main(){
     poem->data_unit = fopen("TheRoadNotTaken.txt","r");
     math->data_unit = fopen("PythagorasTheorem.txt","r");
     int t;
-    printf("Enter poem-router's unique IP (17-255): ");
+    printf("Enter poem-router's unique IP (16-255): ");
     scanf("%d",&t);
     getchar();
     poem->IP = (unsigned char)t;
-    printf("Enter math-router's unique IP (17-255): ");
+    printf("Enter math-router's unique IP (16-255): ");
     scanf("%d",&t);
     getchar();
     math->IP = (unsigned char)t;
-    printf("Enter myPC-router's unique IP (17-255): ");
+    printf("Enter myPC-router's unique IP (16-255): ");
     scanf("%d",&t);
     getchar();
     myPC->IP = (unsigned char)t;
@@ -303,16 +347,16 @@ connect:
         if(choice=='d') goto end;
         else if(choice=='a'||choice=='b') send_request(myPC, DNS(choice));
         else if(choice == 'c' ){
-            printf("Enter IP of the router to crash: ");
+            printf("\tEnter IP of the router to crash: ");
             scanf("%d",&t);
             getchar();
             PtrArr[(unsigned char)t]->status = 0;
-            echo(PtrArr[(unsigned char)t]);
+            echo(PtrArr, PtrArr[(unsigned char)t]);
         }
         else printf("Please enter valid choice.\n");
     }
 
-// disconnected    
+// disconnected
 end:printf("\n\tDisconnected!!\n");
     return 0;
 }
