@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define INT_MAX 2147483647
+#define INFINITY 1234567
+
 // for simplicity, IP addresses are of 1 byte
 
 struct router{
@@ -61,7 +62,7 @@ void connect_routers(struct router* a, struct router* b){
 
 // Evaluates minimum distance between routers
 int minDistance(int dist[], bool SPT[]){
-    int min = INT_MAX, min_index;
+    int min = INFINITY, min_index;
  
     for (int v = 0; v < 15; v++)
         if (SPT[v] == false && dist[v] <= min)
@@ -74,7 +75,7 @@ int minDistance(int dist[], bool SPT[]){
 void dijkstra(int graph[15][15], int src, struct router* r){
     bool SPT[15];
     for(int i=0;i<15;i++) {
-        r->routing_table[i] = INT_MAX;
+        r->routing_table[i] = INFINITY;
         SPT[i] = false;
     }
     r->routing_table[src] = 0;
@@ -84,7 +85,7 @@ void dijkstra(int graph[15][15], int src, struct router* r){
 
         for (int v = 0; v < 15; v++)
             if (!SPT[v] && graph[u][v] 
-                && r->routing_table[u] != INT_MAX 
+                && r->routing_table[u] != INFINITY 
                 && r->routing_table[u] + graph[u][v] < r->routing_table[v])
                 r->routing_table[v] = r->routing_table[u] + graph[u][v];
     }
@@ -205,10 +206,13 @@ struct database* route(struct database* s, unsigned int p){
     if(r_IP % (1<<4) == 0) r_level=0;
     else r_level = 1;
 
-    if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) here = here->upper_layer;
+    if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) {
+        if(here->upper_layer->status == 1) here = here->upper_layer;
+        else return here->user;
+    }
     
     if (here->level == 0) {
-        if (here->routing_table[(r_IP>>4)-1] == INT_MAX) return here->user;
+        if (here->routing_table[(r_IP>>4)-1] == INFINITY) return here->user;
         while( (r_IP>>4) != (here->IP>>4) ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP>>4)-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP>>4)-1])
                 here=here->adjacent[0];
@@ -218,7 +222,7 @@ struct database* route(struct database* s, unsigned int p){
     }
 
     if (here->level == 1) {
-        if (here->routing_table[(r_IP%(1<<4))-1] == INT_MAX) return here->user;
+        if (here->routing_table[(r_IP%(1<<4))-1] == INFINITY) return here->user;
         while( r_IP != here->IP ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP%(1<<4))-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP%(1<<4))-1])
                 here=here->adjacent[0];
@@ -262,7 +266,7 @@ void send_request( struct database* sender , unsigned char r_IP){
 // Handling crashing of a router
 void echo(struct router* PtrArr[], struct router* CR){
     // echo
-    for(int i=0;i<15;i++) if(CR->routing_table[i]!=INT_MAX){
+    for(int i=0;i<15;i++) if(CR->routing_table[i]!=INFINITY){
         unsigned int p = ((CR->adjacent[0]->IP)<<24) + (CR->IP<<16) + (1<<10);
         route(CR->user, p);
     }
@@ -274,11 +278,11 @@ void echo(struct router* PtrArr[], struct router* CR){
             g[i][j] = 0;
             g[j][i] = 0;
             if( (PtrArr[(i+1)<<4]->status == 0) || (PtrArr[(j+1)<<4]->status == 0) ) ;
-            else if(PtrArr[(i+1)<<4]->adjacent[0]->IP == PtrArr[(j+1)<<4]->IP) {
+            else if(PtrArr[(i+1)<<4]->adjacent[0]->IP == (j+1)<<4 ) {
                 g[i][j]=PtrArr[(i+1)<<4]->weight[0];
                 g[j][i]=PtrArr[(i+1)<<4]->weight[0];
             }
-            else if(PtrArr[(i+1)<<4]->adjacent[1]->IP == PtrArr[(j+1)<<4]->IP){
+            else if(PtrArr[(i+1)<<4]->adjacent[1]->IP == (j+1)<<4 ){
                 g[i][j]=PtrArr[(i+1)<<4]->weight[1];
                 g[j][i]=PtrArr[(i+1)<<4]->weight[1];
             }
