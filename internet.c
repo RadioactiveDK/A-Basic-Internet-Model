@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define INT_MAX 123456
+#define INT_MAX 2147483647
 // for simplicity, IP addresses are of 1 byte
 
 struct router{
