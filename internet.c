@@ -210,12 +210,18 @@ struct database* route(struct database* s, unsigned int p){
     
     if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) {
         if(here->upper_layer->status == 1) here = here->upper_layer;
-        else return here->user;
+        else{
+            if(enable)printf("\n");
+            return here->user;
+        }
         if(enable)printf("%d ",here->IP);
     }
     
     if (here->level == 0) {
-        if (here->routing_table[(r_IP>>4)-1] == INFINITY) return here->user;
+        if (here->routing_table[(r_IP>>4)-1] == INFINITY){
+            if(enable)printf("\n");
+            return here->user;
+        }
         while( (r_IP>>4) != (here->IP>>4) ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP>>4)-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP>>4)-1])
                 here=here->adjacent[0];
@@ -227,7 +233,10 @@ struct database* route(struct database* s, unsigned int p){
     }
 
     if (here->level == 1) {
-        if (here->routing_table[(r_IP%(1<<4))-1] == INFINITY) return here->user;
+        if (here->routing_table[(r_IP%(1<<4))-1] == INFINITY){  
+            if(enable)printf("\n");
+            return here->user;
+        }
         while( r_IP != here->IP ){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP%(1<<4))-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP%(1<<4))-1])
                 here=here->adjacent[0];
@@ -245,12 +254,13 @@ void send_request( struct database* sender , unsigned char r_IP){
     enable=1;
     
     unsigned int p = r_IP*(1<<24) + sender->IP*(1<<16);
+    printf("Route To:");
     temp = route(sender, p);
 
 
     if(temp->IP == r_IP) p = sender->IP*(1<<24) + r_IP*(1<<16);
     else p = sender->IP*(1<<24) + r_IP*(1<<16) + (1<<8);
-
+    printf("Route From:");
     temp1 = route(temp,p);
 
     printf("\n");
