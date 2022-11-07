@@ -197,18 +197,21 @@ void internet(struct router* PtrArr[], unsigned char PC_IP, unsigned char p_IP ,
     
 }
 
+int enable=0;
 // Routing algorithm using the routing tables
 struct database* route(struct database* s, unsigned int p){
     struct router* here = s->connected_router;
 
     unsigned char r_IP = (unsigned char)(p>>24);
     int r_level;
+    if(enable)printf("\t\t%d ",here->IP);
     if(r_IP % (1<<4) == 0) r_level=0;
     else r_level = 1;
-
+    
     if( here->level==1 && ((r_level==1 && ((here->IP)>>4) != ((r_IP)>>4)) || (r_level==0)) ) {
         if(here->upper_layer->status == 1) here = here->upper_layer;
         else return here->user;
+        if(enable)printf("%d ",here->IP);
     }
     
     if (here->level == 0) {
@@ -217,8 +220,10 @@ struct database* route(struct database* s, unsigned int p){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP>>4)-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP>>4)-1])
                 here=here->adjacent[0];
             else here=here->adjacent[1];
+            if(enable)printf("%d ",here->IP);
         }
-        if(here->IP != r_IP ) here=here->lower_layer;
+        if(here->IP != r_IP ) {here=here->lower_layer;
+        if(enable)printf("%d ",here->IP);}
     }
 
     if (here->level == 1) {
@@ -227,15 +232,17 @@ struct database* route(struct database* s, unsigned int p){
             if(here->weight[0] + here->adjacent[0]->routing_table[(r_IP%(1<<4))-1] < here->weight[1] + here->adjacent[1]->routing_table[(r_IP%(1<<4))-1])
                 here=here->adjacent[0];
             else here=here->adjacent[1];
+            if(enable)printf("%d ",here->IP);
         }
     }
-    
+    if(enable)printf("\n");
     return here->user;
 }
 
 // Converting data to packets and delivering them
 void send_request( struct database* sender , unsigned char r_IP){
     struct database *temp, *temp1;
+    enable=1;
     
     unsigned int p = r_IP*(1<<24) + sender->IP*(1<<16);
     temp = route(sender, p);
@@ -266,6 +273,7 @@ void send_request( struct database* sender , unsigned char r_IP){
 // Handling crashing of a router
 void echo(struct router* PtrArr[], struct router* CR){
     // echo
+    enable=0;
     for(int i=0;i<15;i++) if(CR->routing_table[i]!=INFINITY){
         unsigned int p = ((CR->adjacent[0]->IP)<<24) + (CR->IP<<16) + (1<<10);
         route(CR->user, p);
