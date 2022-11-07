@@ -369,7 +369,7 @@ connect:
         if(choice=='d') goto end;
         else if(choice=='a'||choice=='b') send_request(myPC, DNS(choice));
         else if(choice == 'c' ){
-            printf("\tEnter IP of the router to crash: ");
+            printf("\tEnter IP of the router to crash(16-255): ");
             scanf("%d",&t);
             getchar();
             PtrArr[(unsigned char)t]->status = 0;
