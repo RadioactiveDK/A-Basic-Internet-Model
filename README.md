@@ -1,5 +1,4 @@
-A Basic Internet Model
----
+# A Basic Internet Model
 
 To run the program:
 
